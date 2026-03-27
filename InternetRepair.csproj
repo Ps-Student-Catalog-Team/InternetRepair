@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+
+	  <TargetFramework>netcoreapp3.1</TargetFramework>
+
+	  <LangVersion>10.0</LangVersion>
+	  <Nullable>enable</Nullable>    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotRas.for.Win7" Version="1.3.0" />
+  </ItemGroup>
+
+</Project>
