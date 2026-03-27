@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:InternetRepair"
         mc:Ignorable="d"
         Title="学生目录 · 网络接入工具" Height="600" Width="1000"
         WindowStartupLocation="CenterScreen"
@@ -91,30 +90,48 @@
             <StackPanel Margin="24">
                 <!-- 标题 -->
                 <TextBlock Text="🔌 选择连接方式" FontSize="20" FontWeight="SemiBold" 
-                           Foreground="#2C7A4D" Margin="0,0,0,20"/>
+                   Foreground="#2C7A4D" Margin="0,0,0,10"/>
+
+                <!-- 当前网络状态（置于顶部） -->
+                <Border Background="#F9F9F9" CornerRadius="8" Margin="0,0,0,10" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="📡 当前网络状态" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="网络状态文本" Text="检测中..." FontSize="12" Foreground="#666666" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- 连接选项 -->
-                <RadioButton Content="通过代理1接入" GroupName="ConnectionType"/>
-                <RadioButton Content="通过代理2连入" GroupName="ConnectionType"/>
-                <RadioButton Content="通过VPN接入" GroupName="ConnectionType"/>
+                <RadioButton x:Name="Proxy1Radio" Content="通过代理1接入" GroupName="ConnectionType" Margin="0,8"/>
+                <RadioButton x:Name="Proxy2Radio" Content="通过代理2连入" GroupName="ConnectionType" Margin="0,8"/>
+                <RadioButton x:Name="VpnRadio" Content="通过VPN接入" GroupName="ConnectionType" Margin="0,8"/>
 
                 <!-- 进度条区域 -->
                 <StackPanel Margin="0,30,0,0">
                     <TextBlock x:Name="进度显示" Text="连接状态：就绪" FontSize="13" Foreground="#666666" Margin="0,0,0,8"/>
-                    <ProgressBar Height="8" Background="#E0E0E0" Foreground="#2C7A4D" 
-                                 BorderThickness="0" Margin="0,5,0,20"/>
+                    <ProgressBar x:Name="连接进度条" Height="8" Background="#E0E0E0" Foreground="#2C7A4D" 
+                         BorderThickness="0" Margin="0,5,0,20"/>
                 </StackPanel>
 
                 <!-- 连接按钮 -->
-                <Button Content="开始连接" Height="48" Margin="0,10,0,0"/>
+                <Button x:Name="连接按钮" Content="开始连接" Click="Button_Click" Height="48" Margin="0,10,0,0"/>
 
-                <!-- 说明文字（可选） -->
+                <!-- 帮助面板（保留帮助链接，可简化） -->
+                <Border Background="#F9F9F9" CornerRadius="8" Margin="0,25,0,0" Padding="12">
+                    <StackPanel>
+                        <TextBlock FontSize="12">
+                    需要帮助？
+                    <Hyperlink NavigateUri="https://example.com/help" RequestNavigate="Hyperlink_RequestNavigate">访问帮助中心</Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- 说明文字 -->
                 <TextBlock Text="选择一种方式后点击连接，进度条将显示状态。" 
-                           FontSize="12" Foreground="#999999" TextWrapping="Wrap" 
-                           Margin="0,20,0,0" TextAlignment="Center"/>
+                   FontSize="12" Foreground="#999999" TextWrapping="Wrap" 
+                   Margin="0,20,0,0" TextAlignment="Center"/>
             </StackPanel>
         </Border>
-
+            
         <!-- ========== 右侧：关于与公告区 ========== -->
         <Border Style="{StaticResource CardStyle}" Grid.Column="1" Margin="20,0,0,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
