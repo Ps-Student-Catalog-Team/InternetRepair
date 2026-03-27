@@ -221,7 +221,6 @@ namespace InternetRepair
 
             Dispatcher.Invoke(() => 连接进度条.Value = 100);
             Dispatcher.Invoke(() => 进度显示.Text = "连接状态：代理1已启用");
-            MessageBox.Show("代理1已成功启用。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
             _isConnected = true;
             UpdateNetworkStatus();
         }
@@ -246,7 +245,6 @@ namespace InternetRepair
 
             Dispatcher.Invoke(() => 连接进度条.Value = 100);
             Dispatcher.Invoke(() => 进度显示.Text = "连接状态：代理2已启用");
-            MessageBox.Show("代理2已成功启用。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
             _isConnected = true;
             UpdateNetworkStatus();
         }
@@ -274,7 +272,6 @@ namespace InternetRepair
 
             Dispatcher.Invoke(() => 连接进度条.Value = 100);
             Dispatcher.Invoke(() => 进度显示.Text = "连接状态：VPN 已连接");
-            MessageBox.Show("VPN 连接已建立。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
             _isConnected = true;
             UpdateNetworkStatus();
         }
