@@ -3,12 +3,12 @@ name: Build and Release
 on:
   push:
     branches:
-      - master                # 每次推送到 master 都运行（可选）
+      - master
     tags:
-      - 'v*'                  # 推送版本标签时触发（例如 v1.0.0）
+      - 'v*'
   pull_request:
     branches:
-      - master                # PR 时也运行（可选）
+      - master
 
 jobs:
   build:
@@ -20,43 +20,56 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 安装 .NET SDK（适用于 .NET Core / .NET 5+ 项目）
+      # 列出根目录文件（调试用，可删除）
+      - name: List files
+        run: dir
+        shell: pwsh
+
+      # 查找 .csproj 文件（假设只有一个）
+      - name: Find project file
+        id: find_csproj
+        run: |
+          $csproj = Get-ChildItem -Filter "*.csproj" -Recurse | Select-Object -First 1
+          if ($csproj) {
+            echo "project_path=$($csproj.FullName)" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "No .csproj file found"
+            exit 1
+          }
+        shell: pwsh
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'    # 根据项目实际版本修改
 
-      # 恢复依赖（发布时会自动恢复，此处保留便于排查问题）
       - name: Restore dependencies
-        run: dotnet restore NetworkRepairs.csproj
+        run: dotnet restore "${{ steps.find_csproj.outputs.project_path }}"
+        shell: pwsh
 
-      # 发布为自包含应用程序（包含 .NET 运行时）
       - name: Publish self-contained app
         run: |
-          dotnet publish NetworkRepairs.csproj `
+          dotnet publish "${{ steps.find_csproj.outputs.project_path }}" `
             --configuration Release `
             --self-contained true `
             --runtime win-x64 `
             --output ./publish_output `
-            -p:PublishSingleFile=true   # 可选：打包为单个 exe 文件
+            -p:PublishSingleFile=true
         shell: pwsh
 
-      # 将发布产物打包成 zip
       - name: Package build artifacts
         run: |
           $outputDir = "publish"
           New-Item -ItemType Directory -Force -Path $outputDir
-          Compress-Archive -Path "./publish_output/*" -DestinationPath "$outputDir/NetworkRepairs.zip" -Force
+          Compress-Archive -Path "./publish_output/*" -DestinationPath "$outputDir/InternetRepair.zip" -Force
         shell: pwsh
 
-      # 上传 zip 包作为工作流产物（可选）
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NetworkRepairs
-          path: publish/NetworkRepairs.zip
+          name: InternetRepair
+          path: publish/InternetRepair.zip
 
-      # 如果是标签触发，创建 Release 并上传 zip
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -64,6 +77,6 @@ jobs:
           name: ${{ github.ref_name }}
           draft: false
           prerelease: false
-          files: publish/NetworkRepairs.zip
+          files: publish/InternetRepair.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
