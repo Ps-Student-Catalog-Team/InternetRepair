@@ -2,11 +2,13 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 
 namespace InternetRepair
 {
@@ -35,7 +37,6 @@ namespace InternetRepair
             _cts?.Cancel();
             if (_isConnected)
             {
-                // 异步执行清理，但窗口关闭无需等待
                 _ = DisconnectAndCleanupAsync();
             }
             _statusTimer?.Stop();
@@ -56,12 +57,86 @@ namespace InternetRepair
             UpdateNetworkStatus();
         }
 
-        // 从服务器获取最新公告内容
         private async Task<string> GetAnnouncementFromServerAsync()
         {
-            return "学生目录目前已重新获取部分密码\r\n\r\n更新了VPN状态页面φ(゜▽゜*)♪\r\n\r\n以后VPN的最新密码将会同步在VPN状态页面\r\n\r\n本网站仅向学生提供服务\r\n使用服务产生的一切后果由使用者承担";
+            const string remoteApiUrl = "http://10.88.202.73:3132/api/announcement";
+            const string localApiUrl = "http://localhost:3132/api/announcement";
+
+            // 1. 先尝试 Ping 远程 IP，决定使用哪个 URL
+            string apiUrl = await IsHostReachableAsync("10.88.202.73") ? remoteApiUrl : localApiUrl;
+
+            // 2. 创建 HttpClient 并设置超时 1 秒
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(1); // 整个请求的超时时间
+
+            try
+            {
+                // 3. 发起 HTTP 请求
+                var json = await httpClient.GetStringAsync(apiUrl);
+
+                // 4. 解析 JSON，提取 newest.content 数组
+                using var document = JsonDocument.Parse(json);
+                var root = document.RootElement;
+
+                if (root.TryGetProperty("newest", out var newestElement) &&
+                    newestElement.TryGetProperty("content", out var contentElement) &&
+                    contentElement.ValueKind == JsonValueKind.Array)
+                {
+                    var contentList = new List<string>();
+                    foreach (var item in contentElement.EnumerateArray())
+                    {
+                        var rawText = item.GetString() ?? string.Empty;
+                        var plainText = HtmlToPlainText(rawText);
+                        contentList.Add(plainText);
+                    }
+
+                    return string.Join("\r\n\r\n", contentList);
+                }
+                else
+                {
+                    return "公告数据格式错误，请联系管理员。";
+                }
+            }
+            catch (Exception ex)
+            {
+                // 记录日志（略），返回友好提示
+                return $"无法获取公告：{ex.Message}";
+            }
         }
 
+        /// <summary>
+        /// 简单的 HTML 转纯文本方法，移除所有标签，保留内部文本。
+        /// </summary>
+        private static string HtmlToPlainText(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+                return html;
+
+            // 移除 HTML 标签
+            var plain = System.Text.RegularExpressions.Regex.Replace(html, "<[^>]*>", "");
+            // 解码 HTML 实体
+            plain = System.Net.WebUtility.HtmlDecode(plain);
+            // 合并空白字符
+            plain = System.Text.RegularExpressions.Regex.Replace(plain, @"\s+", " ");
+            return plain.Trim();
+        }
+
+        /// <summary>
+        /// 异步检测指定主机是否可达（通过 ICMP Ping，超时 1 秒）
+        /// </summary>
+        private static async Task<bool> IsHostReachableAsync(string host)
+        {
+            using var ping = new Ping();
+            try
+            {
+                var reply = await Task.Run(() => ping.Send(host, 1000)); // 超时 1 秒
+                return reply?.Status == IPStatus.Success;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         private async Task LoadAnnouncementAsync()
         {
             try
@@ -95,7 +170,6 @@ namespace InternetRepair
             }
         }
 
-        // 连接按钮点击事件
         // 连接按钮点击事件
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
