@@ -57,27 +57,33 @@ namespace InternetRepair
             UpdateNetworkStatus();
         }
 
-        private async Task<string> GetAnnouncementFromServerAsync()
+        private async Task<(string Announcement, string ModifiedTime)> GetAnnouncementFromServerAsync()
         {
             const string remoteApiUrl = "http://10.88.202.73:3132/api/announcement";
             const string localApiUrl = "http://localhost:3132/api/announcement";
 
-            // 1. 先尝试 Ping 远程 IP，决定使用哪个 URL
+            // 1. 判断远程主机是否可达，选择 URL
             string apiUrl = await IsHostReachableAsync("10.88.202.73") ? remoteApiUrl : localApiUrl;
 
-            // 2. 创建 HttpClient 并设置超时 1 秒
+            // 2. 创建 HttpClient，设置超时 1 秒
             using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(1); // 整个请求的超时时间
+            httpClient.Timeout = TimeSpan.FromSeconds(1);
 
             try
             {
-                // 3. 发起 HTTP 请求
+                // 3. 请求 API
                 var json = await httpClient.GetStringAsync(apiUrl);
 
-                // 4. 解析 JSON，提取 newest.content 数组
+                // 4. 解析 JSON
                 using var document = JsonDocument.Parse(json);
                 var root = document.RootElement;
 
+                // 5. 提取修改时间（如果不存在则返回空字符串）
+                string modifiedTime = root.TryGetProperty("serverModifiedTime", out var timeElement)
+                    ? timeElement.GetString() ?? string.Empty
+                    : string.Empty;
+
+                // 6. 提取 newest.content 数组
                 if (root.TryGetProperty("newest", out var newestElement) &&
                     newestElement.TryGetProperty("content", out var contentElement) &&
                     contentElement.ValueKind == JsonValueKind.Array)
@@ -90,17 +96,19 @@ namespace InternetRepair
                         contentList.Add(plainText);
                     }
 
-                    return string.Join("\r\n\r\n", contentList);
+                    string announcement = string.Join("\r\n\r\n", contentList);
+                    return (announcement, modifiedTime);
                 }
                 else
                 {
-                    return "公告数据格式错误，请联系管理员。";
+                    // 数据结构不符合预期
+                    return ("公告数据格式错误，请联系管理员。", modifiedTime);
                 }
             }
             catch (Exception ex)
             {
-                // 记录日志（略），返回友好提示
-                return $"无法获取公告：{ex.Message}";
+                // 记录日志（略），返回错误信息，修改时间为空
+                return ($"无法获取公告：{ex.Message}", string.Empty);
             }
         }
 
@@ -129,8 +137,9 @@ namespace InternetRepair
             using var ping = new Ping();
             try
             {
-                var reply = await Task.Run(() => ping.Send(host, 1000)); // 超时 1 秒
-                return reply?.Status == IPStatus.Success;
+                // 使用异步 Ping 方法（推荐）
+                var reply = await ping.SendPingAsync(host, 1000);
+                return reply.Status == IPStatus.Success;
             }
             catch
             {
@@ -141,15 +150,16 @@ namespace InternetRepair
         {
             try
             {
-                string announcement = await GetAnnouncementFromServerAsync();
+                var (announcement, modifiedTime) = await GetAnnouncementFromServerAsync();
                 公告内容.Text = announcement;
+                公告时间.Content = string.IsNullOrEmpty(modifiedTime) ? "未知时间" : modifiedTime;
             }
             catch (Exception ex)
             {
                 公告内容.Text = $"获取公告失败：{ex.Message}";
+                公告时间.Content = string.Empty;
             }
         }
-
         // 更新网络状态显示（使用 VpnManager 获取当前代理设置）
         private void UpdateNetworkStatus()
         {
