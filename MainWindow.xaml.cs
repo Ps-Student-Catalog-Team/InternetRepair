@@ -18,12 +18,14 @@ namespace InternetRepair
         private DispatcherTimer _statusTimer;
         private CancellationTokenSource _cts; // 用于取消连接操作
         private bool _isConnected; // 是否已连接成功
+        private string _vpnPassword; // 存储从API获取的VPN密码（新增）
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeStatusTimer();
         }
+
         private void InitializeStatusTimer()
         {
             _statusTimer = new DispatcherTimer();
@@ -50,11 +52,31 @@ namespace InternetRepair
             e.Handled = true;
         }
 
-        // 窗口加载时获取最新公告和网络状态
+        // 窗口加载时获取最新公告、网络状态以及VPN密码
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadAnnouncementAsync();
+            await LoadVpnPasswordAsync(); // 新增：获取VPN密码
             UpdateNetworkStatus();
+        }
+
+        // 新增：从API获取VPN密码并存储到 _vpnPassword
+        private async Task LoadVpnPasswordAsync()
+        {
+            try
+            {
+                using HttpClient client = new HttpClient();
+                HttpResponseMessage response = await client.GetAsync("http://10.88.202.73:3132/api/vpn-password");
+                string json = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(json);
+                _vpnPassword = doc.RootElement.GetProperty("password").GetString();
+            }
+            catch (Exception ex)
+            {
+                // 如果获取密码失败，记录日志或提示用户，这里设置为空并显示错误
+                _vpnPassword = null;
+                MessageBox.Show($"获取VPN密码失败：{ex.Message}\nVPN连接将不可用。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private async Task<(string Announcement, string ModifiedTime)> GetAnnouncementFromServerAsync()
@@ -146,6 +168,7 @@ namespace InternetRepair
                 return false;
             }
         }
+
         private async Task LoadAnnouncementAsync()
         {
             try
@@ -160,6 +183,7 @@ namespace InternetRepair
                 公告时间.Content = string.Empty;
             }
         }
+
         // 更新网络状态显示（使用 VpnManager 获取当前代理设置）
         private void UpdateNetworkStatus()
         {
@@ -211,6 +235,11 @@ namespace InternetRepair
                     }
                     else if (VpnRadio.IsChecked == true)
                     {
+                        // 检查VPN密码是否已成功获取
+                        if (string.IsNullOrEmpty(_vpnPassword))
+                        {
+                            throw new Exception("VPN密码未获取到，请检查网络或稍后重试。");
+                        }
                         await ConnectViaVpnAsync(token);
                     }
                     else
@@ -287,7 +316,7 @@ namespace InternetRepair
         // 通过代理1接入（支持取消）
         private async Task ConnectViaProxy1Async(CancellationToken cancellationToken)
         {
-            string proxyServer = "127.0.0.1:8080";
+            string proxyServer = "10.88.20.273:10001";
             string bypassList = "localhost;127.*;192.168.*";
 
             // 检查取消请求
@@ -312,7 +341,7 @@ namespace InternetRepair
         // 通过代理2接入（支持取消）
         private async Task ConnectViaProxy2Async(CancellationToken cancellationToken)
         {
-            string proxyServer = "127.0.0.1:8888";
+            string proxyServer = "10.88.202.73:10002";
             string bypassList = "localhost;127.*;192.168.*";
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -339,7 +368,6 @@ namespace InternetRepair
             string entryName = "以太网 4";
             string serverAddress = "10.88.202.73";
             string userName = "ps";
-            string password = @"\@(^O^)@/";
             string preSharedKey = "pysyzx";
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -349,7 +377,8 @@ namespace InternetRepair
                 Dispatcher.Invoke(() => 进度显示.Text = "连接状态：正在创建 VPN 连接...");
                 Dispatcher.Invoke(() => 连接进度条.Value = 30);
 
-                bool success = _vpnManager.CreateAndConnectVpn(entryName, serverAddress, userName, password, preSharedKey);
+                // 使用类字段 _vpnPassword 作为密码
+                bool success = _vpnManager.CreateAndConnectVpn(entryName, serverAddress, userName, _vpnPassword, preSharedKey);
                 if (!success)
                     throw new Exception("创建或连接 VPN 失败，请检查参数或网络。");
             }, cancellationToken);
@@ -359,6 +388,5 @@ namespace InternetRepair
             _isConnected = true;
             UpdateNetworkStatus();
         }
-
     }
 }

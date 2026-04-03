@@ -113,10 +113,10 @@
                 <RadioButton x:Name="VpnRadio" Content="通过VPN接入" GroupName="ConnectionType" Margin="0,8"/>
 
                 <!-- 进度条区域 -->
-                <StackPanel Margin="0,30,0,0">
+                <StackPanel Margin="0,13,0,0" Height="48">
                     <TextBlock x:Name="进度显示" Text="连接状态：就绪" FontSize="13" Foreground="#5D6D7E" Margin="0,0,0,8"/>
-                    <ProgressBar x:Name="连接进度条" Height="8" Background="#E9ECF0" Foreground="#2C6B9E" 
-                                 BorderThickness="0" Margin="0,5,0,20"/>
+                    <ProgressBar x:Name="连接进度条" Height="14" Background="#E9ECF0" Foreground="#2C6B9E" 
+                                 BorderThickness="0"/>
                 </StackPanel>
 
                 <!-- 连接按钮 -->
