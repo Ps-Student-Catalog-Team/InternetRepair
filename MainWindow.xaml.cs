@@ -316,7 +316,7 @@ namespace InternetRepair
         // 通过代理1接入（支持取消）
         private async Task ConnectViaProxy1Async(CancellationToken cancellationToken)
         {
-            string proxyServer = "10.88.20.273:10001";
+            string proxyServer = "10.88.202.73:10001";
             string bypassList = "localhost;127.*;192.168.*";
 
             // 检查取消请求
